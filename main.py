@@ -84,62 +84,120 @@ async def on_ready():
 async def kick(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
     if not user_id:
-        return await interaction.response.send_message("User not found")
+        return await interaction.response.send_message(
+            "User not found.",
+            ephemeral=True)
     ok, res = group.kick(user_id)
-    await interaction.response.send_message(f"Kicked {username}: {res}")
-kick.dm_permission = True
+    if ok:
+        await interaction.response.send_message(
+            f"{username} has been kicked.",
+            ephemeral=True)
+    else:
+        await interaction.response.send_message(
+            f"Failed to kick {username}.\nRoblox says: {res}",
+            ephemeral=True)
 @bot.tree.command(name="view", description="View a user's rank in the Roblox group")
 async def view(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
+    if not user_id:
+        return await interaction.response.send_message(
+            "User not found.",
+            ephemeral=True)
     role_name, rank_num, role_id = group.get_user_rank(user_id)
+    if role_name is None:
+        return await interaction.response.send_message(
+            f"{username} is not in the group.",
+            ephemeral=True)
     await interaction.response.send_message(
-        f"User: {username}\nRank: {role_name}\nRankNum: {rank_num}\nRoleID: {role_id}")
-view.dm_permission = True
+        f"User: {username}\nRank: {role_name}\nRankNum: {rank_num}\nRoleID: {role_id}",
+        ephemeral=True)
 @bot.tree.command(name="accept", description="Accept a user's join request")
 async def accept(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
+    if not user_id:
+        return await interaction.response.send_message(
+            "User not found.",
+            ephemeral=True)
     ok, res = group.accept(user_id)
-    await interaction.response.send_message(f"Accepted {username}: {res}")
-accept.dm_permission = True
+    if ok:
+        await interaction.response.send_message(
+            f"Accepted {username}.",
+            ephemeral=True)
+    else:
+        await interaction.response.send_message(
+            f"Failed to accept {username}.\nRoblox says: {res}",
+            ephemeral=True)
 @bot.tree.command(name="deny", description="Deny a user's join request")
 async def deny(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
+    if not user_id:
+        return await interaction.response.send_message(
+            "User not found.",
+            ephemeral=True)
     ok, res = group.deny(user_id)
-    await interaction.response.send_message(f"Denied {username}: {res}")
-deny.dm_permission = True
+    if ok:
+        await interaction.response.send_message(
+            f"Denied {username}.",
+            ephemeral=True)
+    else:
+        await interaction.response.send_message(
+            f"Failed to deny {username}.\nRoblox says: {res}",
+            ephemeral=True)
 @bot.tree.command(name="setrank", description="Set a user's rank in the Roblox group")
 async def setrank(interaction: discord.Interaction, username: str, role: str):
     user_id = group.get_user_id(username)
+    if not user_id:
+        return await interaction.response.send_message(
+            "User not found.",
+            ephemeral=True)
     ok, res = group.set_rank(user_id, role)
-    await interaction.response.send_message(f"Set {username} to {role}: {res}")
-setrank.dm_permission = True
+    if ok:
+        await interaction.response.send_message(
+            f"Set {username} to {role}.",
+            ephemeral=True)
+    else:
+        await interaction.response.send_message(
+            f"Failed to set rank.\nRoblox says: {res}",
+            ephemeral=True)
 @bot.tree.command(name="requests", description="View Roblox join requests")
 async def requests_cmd(interaction: discord.Interaction):
     data = group.get_requests()
-    page = data["data"]
+    page = data.get("data", [])
     cursor = data.get("nextPageCursor")
+    if not page:
+        return await interaction.response.send_message(
+            "No pending join requests.",
+            ephemeral=True)
     text = "\n".join([f"{r['requester']['name']} ({r['requester']['userId']})" for r in page])
-    await interaction.response.send_message(f"Join Requests:\n{text}\nCursor: {cursor}")
-requests_cmd.dm_permission = True
+    await interaction.response.send_message(
+        f"Join Requests:\n{text}\nCursor: {cursor}",
+        ephemeral=True)
+async def accept_and_rank(interaction, username, role_name):
+    user_id = group.get_user_id(username)
+    if not user_id:
+        return await interaction.response.send_message(
+            "User not found.",
+            ephemeral=True)
+    ok, res = group.accept(user_id)
+    if not ok:
+        return await interaction.response.send_message(
+            f"Failed to accept {username}.\nRoblox says: {res}",
+            ephemeral=True)
+    ok2, res2 = group.set_rank(user_id, role_name)
+    if not ok2:
+        return await interaction.response.send_message(
+            f"Accepted {username}, but failed to rank.\nRoblox says: {res2}",
+            ephemeral=True)
+    await interaction.response.send_message(
+        f"{username} accepted + ranked {role_name}",
+        ephemeral=True)
 @bot.tree.command(name="accepthelper", description="Accept + rank Helper")
 async def accepthelper(interaction: discord.Interaction, username: str):
-    user_id = group.get_user_id(username)
-    group.accept(user_id)
-    group.set_rank(user_id, "Helper")
-    await interaction.response.send_message(f"{username} accepted + ranked Helper")
-accepthelper.dm_permission = True
+    await accept_and_rank(interaction, username, "Helper")
 @bot.tree.command(name="acceptmod", description="Accept + rank Moderator")
 async def acceptmod(interaction: discord.Interaction, username: str):
-    user_id = group.get_user_id(username)
-    group.accept(user_id)
-    group.set_rank(user_id, "Moderator")
-    await interaction.response.send_message(f"{username} accepted + ranked Moderator")
-acceptmod.dm_permission = True
+    await accept_and_rank(interaction, username, "Moderator")
 @bot.tree.command(name="acceptlbstaff", description="Accept + rank Leaderboard Staff")
 async def acceptlbstaff(interaction: discord.Interaction, username: str):
-    user_id = group.get_user_id(username)
-    group.accept(user_id)
-    group.set_rank(user_id, "Leaderboard Staff")
-    await interaction.response.send_message(f"{username} accepted + ranked LB Staff")
-acceptlbstaff.dm_permission = True
+    await accept_and_rank(interaction, username, "Leaderboard Staff")
 bot.run(os.getenv("DISCORD_TOKEN"))
