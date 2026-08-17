@@ -6,6 +6,7 @@ import requests
 import discord
 from discord import app_commands
 from discord.ext import commands
+
 ROBLOSECURITY = os.getenv("ROBLOSECURITY")
 GROUP_ID = 333735931
 BASE = {
@@ -54,15 +55,13 @@ class RobloxGroup:
     def kick(self, user_id):
         r = requests.delete(
             f"https://groups.roblox.com/v1/groups/{self.group_id}/users/{user_id}",
-            headers=auth_headers()
-        )
+            headers=auth_headers())
         return r.status_code == 200, r.text
     def get_requests(self, cursor=None):
         r = requests.get(
             f"https://groups.roblox.com/v1/groups/{self.group_id}/join-requests",
             headers=BASE,
-            params={"cursor": cursor} if cursor else None
-        )
+            params={"cursor": cursor} if cursor else None)
         return r.json()
     def accept(self, user_id):
         r = requests.post(
@@ -74,7 +73,6 @@ class RobloxGroup:
             f"https://groups.roblox.com/v1/groups/{self.group_id}/join-requests/users/{user_id}",
             headers=auth_headers())
         return r.status_code == 200, r.text
-# -------------------------------------------------------------------
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 group = RobloxGroup(GROUP_ID)
@@ -82,7 +80,10 @@ group = RobloxGroup(GROUP_ID)
 async def on_ready():
     await bot.tree.sync()
     print(f"Logged in as {bot.user}")
-@bot.tree.command(name="kick", description="Kick a user from the Roblox group")
+@bot.tree.command(
+    name="kick",
+    description="Kick a user from the Roblox group",
+    dm_permission=True)
 async def kick(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
     if not user_id:
@@ -90,48 +91,71 @@ async def kick(interaction: discord.Interaction, username: str):
 
     ok, res = group.kick(user_id)
     await interaction.response.send_message(f"Kicked {username}: {res}")
-@bot.tree.command(name="view", description="View a user's rank in the Roblox group")
+@bot.tree.command(
+    name="view",
+    description="View a user's rank in the Roblox group",
+    dm_permission=True)
 async def view(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
     role_name, rank_num, role_id = group.get_user_rank(user_id)
-
     await interaction.response.send_message(
         f"User: {username}\nRank: {role_name}\nRankNum: {rank_num}\nRoleID: {role_id}")
-@bot.tree.command(name="accept", description="Accept a user's join request")
+@bot.tree.command(
+    name="accept",
+    description="Accept a user's join request",
+    dm_permission=True)
 async def accept(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
     ok, res = group.accept(user_id)
     await interaction.response.send_message(f"Accepted {username}: {res}")
-@bot.tree.command(name="deny", description="Deny a user's join request")
+@bot.tree.command(
+    name="deny",
+    description="Deny a user's join request",
+    dm_permission=True)
 async def deny(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
     ok, res = group.deny(user_id)
     await interaction.response.send_message(f"Denied {username}: {res}")
-@bot.tree.command(name="setrank", description="Set a user's rank in the Roblox group")
+@bot.tree.command(
+    name="setrank",
+    description="Set a user's rank in the Roblox group",
+    dm_permission=True)
 async def setrank(interaction: discord.Interaction, username: str, role: str):
     user_id = group.get_user_id(username)
     ok, res = group.set_rank(user_id, role)
     await interaction.response.send_message(f"Set {username} to {role}: {res}")
-@bot.tree.command(name="requests", description="View Roblox join requests")
+@bot.tree.command(
+    name="requests",
+    description="View Roblox join requests",
+    dm_permission=True)
 async def requests_cmd(interaction: discord.Interaction):
     data = group.get_requests()
     page = data["data"]
     cursor = data.get("nextPageCursor")
     text = "\n".join([f"{r['requester']['name']} ({r['requester']['userId']})" for r in page])
     await interaction.response.send_message(f"Join Requests:\n{text}\nCursor: {cursor}")
-@bot.tree.command(name="accepthelper", description="Accept + rank Helper")
+@bot.tree.command(
+    name="accepthelper",
+    description="Accept + rank Helper",
+    dm_permission=True)
 async def accepthelper(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
     group.accept(user_id)
     group.set_rank(user_id, "Helper")
     await interaction.response.send_message(f"{username} accepted + ranked Helper")
-@bot.tree.command(name="acceptmod", description="Accept + rank Moderator")
+@bot.tree.command(
+    name="acceptmod",
+    description="Accept + rank Moderator",
+    dm_permission=True)
 async def acceptmod(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
     group.accept(user_id)
     group.set_rank(user_id, "Moderator")
     await interaction.response.send_message(f"{username} accepted + ranked Moderator")
-@bot.tree.command(name="acceptlbstaff", description="Accept + rank Leaderboard Staff")
+@bot.tree.command(
+    name="acceptlbstaff",
+    description="Accept + rank Leaderboard Staff",
+    dm_permission=True)
 async def acceptlbstaff(interaction: discord.Interaction, username: str):
     user_id = group.get_user_id(username)
     group.accept(user_id)
